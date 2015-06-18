@@ -41,6 +41,28 @@ extern "C" {
 
 }
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__)
+
+#include <windows.h>
+#include <vector>
+
+static std::vector<WORD> *callsToSetConsoleTextAttribute_ = NULL;
+
+extern "C" BOOL WINAPI SetConsoleTextAttribute(HANDLE, WORD wAttributes)
+{
+    if( !callsToSetConsoleTextAttribute_ ) return false;
+    callsToSetConsoleTextAttribute_->push_back(wAttributes);
+    return true;
+}
+
+extern "C" BOOL WINAPI GetConsoleScreenBufferInfo(HANDLE, PCONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo)
+{
+    lpConsoleScreenBufferInfo->wAttributes = (WORD)-1;
+    return true;
+}
+
+#endif
+
 TEST_GROUP(TestOutput)
 {
     TestOutput* printer;
@@ -64,7 +86,7 @@ TEST_GROUP(TestOutput)
         millisTime = 0;
         UT_PTR_SET(GetPlatformSpecificTimeInMillis, MockGetPlatformSpecificTimeInMillis);
         TestOutput::setWorkingEnvironment(TestOutput::eclipse);
-
+        callsToSetConsoleTextAttribute_ = new std::vector<WORD>();
     }
     void teardown()
     {
@@ -75,6 +97,8 @@ TEST_GROUP(TestOutput)
         delete f2;
         delete f3;
         delete result;
+        delete callsToSetConsoleTextAttribute_;
+        callsToSetConsoleTextAttribute_ = NULL;
     }
 };
 
@@ -145,6 +169,42 @@ TEST(TestOutput, PrintTestVerboseEnded)
     STRCMP_EQUAL("TEST(group, test) - 5 ms\n", mock->getOutput().asCharString());
 }
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__)
+
+TEST(TestOutput, printColorWithSuccess)
+{
+    // Prepare
+    mock->color();
+
+    // Exercise
+    printer->printTestsEnded(*result);
+
+    // Verify
+    STRCMP_EQUAL("\nOK (0 tests, 0 ran, 0 checks, 0 ignored, 0 filtered out, 10 ms)\n\n", mock->getOutput().asCharString());
+    CHECK_EQUAL(2, callsToSetConsoleTextAttribute_->size());
+    CHECK_EQUAL(FOREGROUND_GREEN | FOREGROUND_INTENSITY, callsToSetConsoleTextAttribute_->at(0));
+    CHECK_EQUAL((WORD)-1, callsToSetConsoleTextAttribute_->at(1));
+}
+
+TEST(TestOutput, printColorWithFailures)
+{
+    // Prepare
+    mock->color();
+    result->addFailure(*f);
+    printer->flush();
+
+    // Exercise
+    printer->printTestsEnded(*result);
+
+    // Verify
+    STRCMP_EQUAL("\nErrors (1 failures, 0 tests, 0 ran, 0 checks, 0 ignored, 0 filtered out, 10 ms)\n\n", mock->getOutput().asCharString());
+    CHECK_EQUAL(2, callsToSetConsoleTextAttribute_->size());
+    CHECK_EQUAL(FOREGROUND_RED | FOREGROUND_INTENSITY, callsToSetConsoleTextAttribute_->at(0));
+    CHECK_EQUAL((WORD)-1, callsToSetConsoleTextAttribute_->at(1));
+}
+
+#else
+
 TEST(TestOutput, printColorWithSuccess)
 {
     mock->color();
@@ -160,6 +220,8 @@ TEST(TestOutput, printColorWithFailures)
     printer->printTestsEnded(*result);
     STRCMP_EQUAL("\n\033[31;1mErrors (1 failures, 0 tests, 0 ran, 0 checks, 0 ignored, 0 filtered out, 10 ms)\033[m\n\n", mock->getOutput().asCharString());
 }
+
+#endif
 
 TEST(TestOutput, PrintTestRun)
 {

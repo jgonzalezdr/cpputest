@@ -29,6 +29,83 @@
 #include "CppUTest/TestOutput.h"
 #include "CppUTest/PlatformSpecificFunctions.h"
 
+enum ConsoleColor
+{
+    COLOR_RED = 1,
+    COLOR_GREEN = 2
+};
+
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__)
+
+#include <windows.h>
+
+static WORD defaultConsoleAttributes = 0;
+static HANDLE consoleHandle = INVALID_HANDLE_VALUE;
+
+static void initConsole_()
+{
+    if( consoleHandle == INVALID_HANDLE_VALUE )
+    {
+        consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        CONSOLE_SCREEN_BUFFER_INFO defaultConsoleInfo;
+        GetConsoleScreenBufferInfo(consoleHandle, &defaultConsoleInfo);
+
+        defaultConsoleAttributes = defaultConsoleInfo.wAttributes;
+    }
+}
+
+static void resetConsole_(TestOutput*)
+{
+    initConsole_();
+
+    SetConsoleTextAttribute(consoleHandle, defaultConsoleAttributes);
+}
+
+static void setConsoleForegroundColor_(TestOutput* output, ConsoleColor fgColor)
+{
+    initConsole_();
+
+    switch( fgColor )
+    {
+        case COLOR_RED:
+            SetConsoleTextAttribute(consoleHandle, FOREGROUND_RED | FOREGROUND_INTENSITY);
+            break;
+        case COLOR_GREEN:
+            SetConsoleTextAttribute(consoleHandle, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+            break;
+        default:
+            resetConsole_(output);
+            break;
+    }
+}
+
+#else
+
+void resetConsole_(TestOutput* output)
+{
+    output->print("\033[m");
+}
+
+void setConsoleForegroundColor_(TestOutput* output, ConsoleColor fgColor)
+{
+    switch( fgColor )
+    {
+        case COLOR_RED:
+            output->print("\033[31;1m");
+            break;
+        case COLOR_GREEN:
+            output->print("\033[32;1m");
+            break;
+        default:
+            resetConsole_(output);
+            break;
+    }
+}
+
+#endif
+
+
 TestOutput::WorkingEnvironment TestOutput::workingEnvironment_ = TestOutput::detectEnvironment;
 
 void TestOutput::setWorkingEnvironment(TestOutput::WorkingEnvironment workEnvironment)
@@ -142,7 +219,7 @@ void TestOutput::printTestsEnded(const TestResult& result)
     print("\n");
     if (result.getFailureCount() > 0) {
         if (color_) {
-            print("\033[31;1m");
+            setConsoleForegroundColor_(this, COLOR_RED);
         }
         print("Errors (");
         print(result.getFailureCount());
@@ -150,7 +227,7 @@ void TestOutput::printTestsEnded(const TestResult& result)
     }
     else {
         if (color_) {
-            print("\033[32;1m");
+            setConsoleForegroundColor_(this, COLOR_GREEN);
         }
         print("OK (");
     }
@@ -167,7 +244,7 @@ void TestOutput::printTestsEnded(const TestResult& result)
     print(result.getTotalExecutionTime());
     print(" ms)");
     if (color_) {
-        print("\033[m");
+        resetConsole_(this);
     }
     print("\n\n");
 }
