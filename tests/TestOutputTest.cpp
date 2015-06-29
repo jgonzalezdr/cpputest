@@ -86,7 +86,9 @@ TEST_GROUP(TestOutput)
         millisTime = 0;
         UT_PTR_SET(GetPlatformSpecificTimeInMillis, MockGetPlatformSpecificTimeInMillis);
         TestOutput::setWorkingEnvironment(TestOutput::eclipse);
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__)
         callsToSetConsoleTextAttribute_ = new std::vector<WORD>();
+#endif
     }
     void teardown()
     {
@@ -97,8 +99,10 @@ TEST_GROUP(TestOutput)
         delete f2;
         delete f3;
         delete result;
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__)
         delete callsToSetConsoleTextAttribute_;
         callsToSetConsoleTextAttribute_ = NULL;
+#endif
     }
 };
 
