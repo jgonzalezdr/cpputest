@@ -1,3 +1,6 @@
+project(libCppUTest)
+cmake_minimum_required(VERSION 2.8.7)
+
 set(CppUTest_src
         CommandLineArguments.cpp
         MemoryLeakWarningPlugin.cpp
