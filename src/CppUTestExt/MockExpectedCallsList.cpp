@@ -163,16 +163,14 @@ void MockExpectedCallsList::onlyKeepUnmatchingExpectations()
 {
     for (MockExpectedCallsListNode* p = head_; p; p = p->next_)
         if (p->expectedCall_->isMatchingActualCallAndFinalized())
+        {
+            p->expectedCall_->resetActualCallMatchingState();
             p->expectedCall_ = NULL;
+        }
 
     pruneEmptyNodeFromList();
 }
 
-void MockExpectedCallsList::onlyKeepUnmatchingExpectationsRelatedTo(const SimpleString& name)
-{
-    onlyKeepUnmatchingExpectations();
-    onlyKeepExpectationsRelatedTo(name);
-}
 
 void MockExpectedCallsList::onlyKeepExpectationsWithInputParameterName(const SimpleString& name)
 {
@@ -214,24 +212,6 @@ void MockExpectedCallsList::onlyKeepExpectationsOnObject(void* objectPtr)
     pruneEmptyNodeFromList();
 }
 
-
-void MockExpectedCallsList::onlyKeepUnmatchingExpectationsWithInputParameter(const MockNamedValue& parameter)
-{
-    onlyKeepUnmatchingExpectations();
-    onlyKeepExpectationsWithInputParameter(parameter);
-}
-
-void MockExpectedCallsList::onlyKeepUnmatchingExpectationsWithOutputParameter(const MockNamedValue& parameter)
-{
-    onlyKeepUnmatchingExpectations();
-    onlyKeepExpectationsWithOutputParameter(parameter);
-}
-
-void MockExpectedCallsList::onlyKeepUnmatchingExpectationsOnObject(void* objectPtr)
-{
-    onlyKeepUnmatchingExpectations();
-    onlyKeepExpectationsOnObject(objectPtr);
-}
 
 MockCheckedExpectedCall* MockExpectedCallsList::removeOneFinalizedMatchingExpectation()
 {

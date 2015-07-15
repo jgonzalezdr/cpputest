@@ -118,15 +118,25 @@ void MockCheckedActualCall::finalizeCallWhenMatchIsFound()
 void MockCheckedActualCall::callHasSucceeded()
 {
     setState(CALL_SUCCEED);
-    potentiallyMatchingExpectations_.resetActualCallMatchingState();
+}
+
+void MockCheckedActualCall::callIsInProgress()
+{
+    setState(CALL_IN_PROGRESS);
+    if (matchingExpectation_)
+    {
+        matchingExpectation_->resetActualCallMatchingState();
+        matchingExpectation_ = NULL;
+    }
+    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectations();
 }
 
 MockActualCall& MockCheckedActualCall::withName(const SimpleString& name)
 {
     setName(name);
-    setState(CALL_IN_PROGESS);
+    callIsInProgress();
 
-    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsRelatedTo(name);
+    potentiallyMatchingExpectations_.onlyKeepExpectationsRelatedTo(name);
     if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedCallHappenedFailure failure(getTest(), name, allExpectations_);
         failTest(failure);
@@ -147,7 +157,14 @@ MockActualCall& MockCheckedActualCall::withCallOrder(int)
 
 void MockCheckedActualCall::checkInputParameter(const MockNamedValue& actualParameter)
 {
-    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsWithInputParameter(actualParameter);
+    if(hasFailed())
+    {
+        return;
+    }
+
+    callIsInProgress();
+
+    potentiallyMatchingExpectations_.onlyKeepExpectationsWithInputParameter(actualParameter);
 
     if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedInputParameterFailure failure(getTest(), getName(), actualParameter, allExpectations_);
@@ -161,7 +178,14 @@ void MockCheckedActualCall::checkInputParameter(const MockNamedValue& actualPara
 
 void MockCheckedActualCall::checkOutputParameter(const MockNamedValue& outputParameter)
 {
-    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsWithOutputParameter(outputParameter);
+    if(hasFailed())
+    {
+        return;
+    }
+
+    callIsInProgress();
+
+    potentiallyMatchingExpectations_.onlyKeepExpectationsWithOutputParameter(outputParameter);
 
     if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedOutputParameterFailure failure(getTest(), getName(), outputParameter, allExpectations_);
@@ -293,7 +317,11 @@ bool MockCheckedActualCall::hasFailed() const
 
 void MockCheckedActualCall::checkExpectations()
 {
-    if (state_ != CALL_IN_PROGESS) return;
+    if (state_ != CALL_IN_PROGRESS)
+    {
+        potentiallyMatchingExpectations_.resetActualCallMatchingState();
+        return;
+    }
 
     if (potentiallyMatchingExpectations_.hasFinalizedMatchingExpectations())
         FAIL("Actual call is in progress, but there are finalized matching expectations when checking expectations. This cannot happen.") // LCOV_EXCL_LINE
@@ -301,6 +329,7 @@ void MockCheckedActualCall::checkExpectations()
     matchingExpectation_ = potentiallyMatchingExpectations_.removeAndFinalizeOneMatchingExpectation();
     if (matchingExpectation_) {
         callHasSucceeded();
+        potentiallyMatchingExpectations_.resetActualCallMatchingState();
         return;
     }
 
@@ -438,7 +467,9 @@ bool MockCheckedActualCall::hasReturnValue()
 
 MockActualCall& MockCheckedActualCall::onObject(void* objectPtr)
 {
-    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsOnObject(objectPtr);
+    callIsInProgress();
+
+    potentiallyMatchingExpectations_.onlyKeepExpectationsOnObject(objectPtr);
 
     if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedObjectFailure failure(getTest(), getName(), objectPtr, allExpectations_);
