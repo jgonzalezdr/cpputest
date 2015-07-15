@@ -648,7 +648,7 @@ TEST(MockSupportTest, ignoreOtherParametersMultipleCallsButOneDidntHappen)
     MockCheckedExpectedCall* call = addFunctionToExpectationsList("boo");
     call->ignoreOtherParameters();
     call->callWasMade(1);
-    call->parametersWereIgnored();
+    call->finalizeActualCallMatch();
     call->ignoreOtherParameters();
     addFunctionToExpectationsList("boo")->ignoreOtherParameters();
     mock().expectOneCall("boo").ignoreOtherParameters();

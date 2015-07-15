@@ -230,7 +230,7 @@ const char* MockSupport::getTraceOutput()
 
 bool MockSupport::expectedCallsLeft()
 {
-    int callsLeft = expectations_.hasUnfullfilledExpectations();
+    int callsLeft = expectations_.hasUnfulfilledExpectations();
 
     for (MockNamedValueListNode* p = data_.begin(); p; p = p->next())
         if (getMockSupport(p)) callsLeft += getMockSupport(p)->expectedCallsLeft();
@@ -238,13 +238,13 @@ bool MockSupport::expectedCallsLeft()
     return callsLeft != 0;
 }
 
-bool MockSupport::wasLastCallFulfilled()
+bool MockSupport::wasLastActualCallFulfilled()
 {
     if (lastActualFunctionCall_ && !lastActualFunctionCall_->isFulfilled())
         return false;
 
     for (MockNamedValueListNode* p = data_.begin(); p; p = p->next())
-        if (getMockSupport(p) && !getMockSupport(p)->wasLastCallFulfilled())
+        if (getMockSupport(p) && !getMockSupport(p)->wasLastActualCallFulfilled())
                 return false;
 
     return true;
@@ -288,7 +288,7 @@ void MockSupport::countCheck()
     UtestShell::getCurrent()->countCheck();
 }
 
-void MockSupport::checkExpectationsOfLastCall()
+void MockSupport::checkExpectationsOfLastActualCall()
 {
     if(lastActualFunctionCall_)
         lastActualFunctionCall_->checkExpectations();
@@ -300,9 +300,9 @@ void MockSupport::checkExpectationsOfLastCall()
 
 void MockSupport::checkExpectations()
 {
-    checkExpectationsOfLastCall();
+    checkExpectationsOfLastActualCall();
 
-    if (wasLastCallFulfilled() && expectedCallsLeft())
+    if (wasLastActualCallFulfilled() && expectedCallsLeft())
         failTestWithUnexpectedCalls();
 
     if (expectations_.hasCallsOutOfOrder())

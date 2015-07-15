@@ -50,9 +50,9 @@ SimpleString MockCheckedActualCall::getName() const
 }
 
 MockCheckedActualCall::MockCheckedActualCall(int callOrder, MockFailureReporter* reporter, const MockExpectedCallsList& allExpectations)
-    : callOrder_(callOrder), reporter_(reporter), state_(CALL_SUCCEED), fulfilledExpectation_(NULL), allExpectations_(allExpectations), outputParameterExpectations_(NULL)
+    : callOrder_(callOrder), reporter_(reporter), state_(CALL_SUCCEED), matchingExpectation_(NULL), allExpectations_(allExpectations), outputParameterExpectations_(NULL)
 {
-    unfulfilledExpectations_.addUnfilfilledExpectations(allExpectations);
+    potentiallyMatchingExpectations_.addPotentiallyMatchingExpectations(allExpectations);
 }
 
 MockCheckedActualCall::~MockCheckedActualCall()
@@ -103,14 +103,14 @@ void MockCheckedActualCall::finalizeOutputParameters(MockCheckedExpectedCall* ex
     }
 }
 
-void MockCheckedActualCall::finalizeCallWhenFulfilled()
+void MockCheckedActualCall::finalizeCallWhenMatchIsFound()
 {
-    if (unfulfilledExpectations_.hasFulfilledExpectationsWithoutIgnoredParameters()) {
-        finalizeOutputParameters(unfulfilledExpectations_.getOneFulfilledExpectationWithIgnoredParameters());
+    if (potentiallyMatchingExpectations_.hasMatchingExpectations()) {
+        finalizeOutputParameters(potentiallyMatchingExpectations_.getOneMatchingExpectation());
     }
 
-    if (unfulfilledExpectations_.hasFulfilledExpectations()) {
-        fulfilledExpectation_ = unfulfilledExpectations_.removeOneFulfilledExpectation();
+    if (potentiallyMatchingExpectations_.hasFinalizedMatchingExpectations()) {
+        matchingExpectation_ = potentiallyMatchingExpectations_.removeOneFinalizedMatchingExpectation();
         callHasSucceeded();
     }
 }
@@ -118,7 +118,7 @@ void MockCheckedActualCall::finalizeCallWhenFulfilled()
 void MockCheckedActualCall::callHasSucceeded()
 {
     setState(CALL_SUCCEED);
-    unfulfilledExpectations_.resetExpectations();
+    potentiallyMatchingExpectations_.resetActualCallMatchingState();
 }
 
 MockActualCall& MockCheckedActualCall::withName(const SimpleString& name)
@@ -126,16 +126,16 @@ MockActualCall& MockCheckedActualCall::withName(const SimpleString& name)
     setName(name);
     setState(CALL_IN_PROGESS);
 
-    unfulfilledExpectations_.onlyKeepUnfulfilledExpectationsRelatedTo(name);
-    if (unfulfilledExpectations_.isEmpty()) {
+    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsRelatedTo(name);
+    if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedCallHappenedFailure failure(getTest(), name, allExpectations_);
         failTest(failure);
         return *this;
     }
 
-    unfulfilledExpectations_.callWasMade(callOrder_);
+    potentiallyMatchingExpectations_.callWasMade(callOrder_);
 
-    finalizeCallWhenFulfilled();
+    finalizeCallWhenMatchIsFound();
 
     return *this;
 }
@@ -147,30 +147,30 @@ MockActualCall& MockCheckedActualCall::withCallOrder(int)
 
 void MockCheckedActualCall::checkInputParameter(const MockNamedValue& actualParameter)
 {
-    unfulfilledExpectations_.onlyKeepUnfulfilledExpectationsWithInputParameter(actualParameter);
+    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsWithInputParameter(actualParameter);
 
-    if (unfulfilledExpectations_.isEmpty()) {
+    if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedInputParameterFailure failure(getTest(), getName(), actualParameter, allExpectations_);
         failTest(failure);
         return;
     }
 
-    unfulfilledExpectations_.parameterWasPassed(actualParameter.getName());
-    finalizeCallWhenFulfilled();
+    potentiallyMatchingExpectations_.parameterWasPassed(actualParameter.getName());
+    finalizeCallWhenMatchIsFound();
 }
 
 void MockCheckedActualCall::checkOutputParameter(const MockNamedValue& outputParameter)
 {
-    unfulfilledExpectations_.onlyKeepUnfulfilledExpectationsWithOutputParameter(outputParameter);
+    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsWithOutputParameter(outputParameter);
 
-    if (unfulfilledExpectations_.isEmpty()) {
+    if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedOutputParameterFailure failure(getTest(), getName(), outputParameter, allExpectations_);
         failTest(failure);
         return;
     }
 
-    unfulfilledExpectations_.outputParameterWasPassed(outputParameter.getName());
-    finalizeCallWhenFulfilled();
+    potentiallyMatchingExpectations_.outputParameterWasPassed(outputParameter.getName());
+    finalizeCallWhenMatchIsFound();
 }
 
 MockActualCall& MockCheckedActualCall::withUnsignedIntParameter(const SimpleString& name, unsigned int value)
@@ -295,16 +295,16 @@ void MockCheckedActualCall::checkExpectations()
 {
     if (state_ != CALL_IN_PROGESS) return;
 
-    if (! unfulfilledExpectations_.hasUnfullfilledExpectations())
-        FAIL("Actual call is in progress. Checking expectations. But no unfulfilled expectations. Cannot happen.") // LCOV_EXCL_LINE
+    if (potentiallyMatchingExpectations_.hasFinalizedMatchingExpectations())
+        FAIL("Actual call is in progress, but there are finalized matching expectations when checking expectations. This cannot happen.") // LCOV_EXCL_LINE
 
-    fulfilledExpectation_ = unfulfilledExpectations_.removeOneFulfilledExpectationWithIgnoredParameters();
-    if (fulfilledExpectation_) {
+    matchingExpectation_ = potentiallyMatchingExpectations_.removeAndFinalizeOneMatchingExpectation();
+    if (matchingExpectation_) {
         callHasSucceeded();
         return;
     }
 
-    if (unfulfilledExpectations_.hasUnfulfilledExpectationsBecauseOfMissingParameters()) {
+    if (potentiallyMatchingExpectations_.hasUnmatchingExpectationsBecauseOfMissingParameters()) {
         MockExpectedParameterDidntHappenFailure failure(getTest(), getName(), allExpectations_);
         failTest(failure);
     }
@@ -322,8 +322,8 @@ void MockCheckedActualCall::setState(ActualCallState state)
 MockNamedValue MockCheckedActualCall::returnValue()
 {
     checkExpectations();
-    if (fulfilledExpectation_)
-        return fulfilledExpectation_->returnValue();
+    if (matchingExpectation_)
+        return matchingExpectation_->returnValue();
     return MockNamedValue("no return value");
 }
 
@@ -438,17 +438,17 @@ bool MockCheckedActualCall::hasReturnValue()
 
 MockActualCall& MockCheckedActualCall::onObject(void* objectPtr)
 {
-    unfulfilledExpectations_.onlyKeepUnfulfilledExpectationsOnObject(objectPtr);
+    potentiallyMatchingExpectations_.onlyKeepUnmatchingExpectationsOnObject(objectPtr);
 
-    if (unfulfilledExpectations_.isEmpty()) {
+    if (potentiallyMatchingExpectations_.isEmpty()) {
         MockUnexpectedObjectFailure failure(getTest(), getName(), objectPtr, allExpectations_);
         failTest(failure);
         return *this;
     }
 
-    unfulfilledExpectations_.wasPassedToObject();
+    potentiallyMatchingExpectations_.wasPassedToObject();
 
-    finalizeCallWhenFulfilled();
+    finalizeCallWhenMatchIsFound();
     return *this;
 }
 

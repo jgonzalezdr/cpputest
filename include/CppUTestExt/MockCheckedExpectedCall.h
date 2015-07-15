@@ -80,17 +80,18 @@ public:
     virtual bool relatesToObject(void*objectPtr) const;
 
     virtual bool isFulfilled();
-    virtual bool isFulfilledWithoutIgnoredParameters();
-    virtual bool areParametersFulfilled();
-    virtual bool areIgnoredParametersFulfilled();
+    virtual bool canMatchActualCalls();
+    virtual void resetActualCallMatchingState();
+    virtual bool isMatchingActualCallAndFinalized();
+    virtual bool isMatchingActualCall();
+    virtual bool areParametersMatchingActualCall();
     virtual bool isOutOfOrder() const;
 
     virtual void callWasMade(int callOrder);
     virtual void inputParameterWasPassed(const SimpleString& name);
     virtual void outputParameterWasPassed(const SimpleString& name);
-    virtual void parametersWereIgnored();
+    virtual void finalizeActualCallMatch();
     virtual void wasPassedToObject();
-    virtual void resetExpectation();
 
     virtual SimpleString callToString();
     virtual SimpleString missingParametersToString();
@@ -109,18 +110,18 @@ private:
     {
     public:
         MockExpectedFunctionParameter(const SimpleString& name);
-        void setFulfilled(bool b);
-        bool isFulfilled() const;
+        void setMatchesActualCall(bool b);
+        bool isMatchingActualCall() const;
 
     private:
-        bool fulfilled_;
+        bool matchesActualCall_;
     };
 
     MockExpectedFunctionParameter* item(MockNamedValueListNode* node);
 
     bool ignoreOtherParameters_;
-    bool parametersWereIgnored_;
-    int callOrder_;
+    bool isActualCallMatchFinalized_;
+    int actualCallOrder_;
     int expectedCallOrder_;
     bool outOfOrder_;
     MockNamedValueList* inputParameters_;
