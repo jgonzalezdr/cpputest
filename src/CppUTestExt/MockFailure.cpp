@@ -71,9 +71,10 @@ MockFailure::MockFailure(UtestShell* test) : TestFailure(test, "Test failed with
 
 void MockFailure::addExpectationsAndCallHistory(const MockExpectedCallsList& expectations)
 {
-    message_ += "\tEXPECTED calls that did NOT happen:\n";
+    message_ += "\tEXPECTED calls that WERE NOT fulfilled:\n";
     message_ += expectations.unfulfilledCallsToString("\t\t");
-    message_ += "\n\tACTUAL calls that did happen (in call order):\n";
+    /*message_ += "\n\tACTUAL calls that DID happen (in call order):\n";*/
+    message_ += "\n\tEXPECTED calls that WERE fulfilled:\n";
     message_ += expectations.fulfilledCallsToString("\t\t");
 }
 
@@ -82,13 +83,14 @@ void MockFailure::addExpectationsAndCallHistoryRelatedTo(const SimpleString& nam
     MockExpectedCallsList expectationsForFunction;
     expectationsForFunction.addExpectationsRelatedTo(name, expectations);
 
-    message_ += "\tEXPECTED calls that DID NOT happen related to function: ";
+    message_ += "\tEXPECTED calls that WERE NOT fulfilled related to function: ";
     message_ += name;
     message_ += "\n";
 
     message_ += expectationsForFunction.unfulfilledCallsToString("\t\t");
 
-    message_ += "\n\tACTUAL calls that DID happen related to function: ";
+    /*message_ += "\n\tACTUAL calls that DID happen related to function (in call order): ";*/
+    message_ += "\n\tEXPECTED calls that WERE fulfilled related to function: ";
     message_ += name;
     message_ += "\n";
 
@@ -97,15 +99,15 @@ void MockFailure::addExpectationsAndCallHistoryRelatedTo(const SimpleString& nam
 
 MockExpectedCallsDidntHappenFailure::MockExpectedCallsDidntHappenFailure(UtestShell* test, const MockExpectedCallsList& expectations) : MockFailure(test)
 {
-    message_ = "Mock Failure: Expected call did not happen.\n";
+    message_ = "Mock Failure: Expected call WAS NOT fulfilled.\n";
     addExpectationsAndCallHistory(expectations);
 }
 
 MockUnexpectedCallHappenedFailure::MockUnexpectedCallHappenedFailure(UtestShell* test, const SimpleString& name, const MockExpectedCallsList& expectations) : MockFailure(test)
 {
-    int amountOfExpectations = expectations.amountOfExpectationsFor(name);
+    unsigned int amountOfExpectations = expectations.amountOfExpectationsFor(name);
     if (amountOfExpectations)
-        message_ = StringFromFormat("Mock Failure: Unexpected additional (%dth) call to function: ", amountOfExpectations+1);
+        message_ = StringFromFormat("Mock Failure: Unexpected additional (%uth) call to function: ", amountOfExpectations+1);
     else
         message_ = "Mock Failure: Unexpected call to function: ";
     message_ += name;

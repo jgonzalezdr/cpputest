@@ -52,7 +52,18 @@ SimpleString MockCheckedExpectedCall::getName() const
 }
 
 MockCheckedExpectedCall::MockCheckedExpectedCall()
-    : ignoreOtherParameters_(false), isActualCallMatchFinalized_(false), actualCallOrder_(0), expectedCallOrder_(NO_EXPECTED_CALL_ORDER), outOfOrder_(true), returnValue_(""), objectPtr_(NULL), wasPassedToObject_(true)
+    : ignoreOtherParameters_(false), isActualCallMatchFinalized_(false), actualCallOrder_(0), expectedCallOrder_(NO_EXPECTED_CALL_ORDER),
+      outOfOrder_(false), returnValue_(""), objectPtr_(NULL), wasPassedToObject_(true),
+      actualCalls_(0), minCalls_(1), maxCalls_(1)
+{
+    inputParameters_ = new MockNamedValueList();
+    outputParameters_ = new MockNamedValueList();
+}
+
+MockCheckedExpectedCall::MockCheckedExpectedCall(unsigned int minCalls, unsigned int maxCalls)
+    : ignoreOtherParameters_(false), isActualCallMatchFinalized_(false), actualCallOrder_(0), expectedCallOrder_(NO_EXPECTED_CALL_ORDER),
+      outOfOrder_(false), returnValue_(""), objectPtr_(NULL), wasPassedToObject_(true),
+      actualCalls_(0), minCalls_(minCalls), maxCalls_(maxCalls)
 {
     inputParameters_ = new MockNamedValueList();
     outputParameters_ = new MockNamedValueList();
@@ -220,12 +231,12 @@ MockExpectedCall& MockCheckedExpectedCall::ignoreOtherParameters()
 
 bool MockCheckedExpectedCall::isFulfilled()
 {
-	return isMatchingActualCallAndFinalized();
+	return (actualCalls_ >= minCalls_);
 }
 
 bool MockCheckedExpectedCall::canMatchActualCalls()
 {
-	return !isFulfilled();
+	return (actualCalls_ < maxCalls_);
 }
 
 bool MockCheckedExpectedCall::isMatchingActualCallAndFinalized()
@@ -235,18 +246,22 @@ bool MockCheckedExpectedCall::isMatchingActualCallAndFinalized()
 
 bool MockCheckedExpectedCall::isMatchingActualCall()
 {
-    return (actualCallOrder_ != NOT_CALLED_YET) && areParametersMatchingActualCall() && wasPassedToObject_;
+    return areParametersMatchingActualCall() && wasPassedToObject_;
 }
 
 void MockCheckedExpectedCall::callWasMade(int callOrder)
 {
+    actualCalls_++;
     actualCallOrder_ = callOrder;
+
     if (expectedCallOrder_ == NO_EXPECTED_CALL_ORDER)
         outOfOrder_ = false;
     else if (actualCallOrder_ == expectedCallOrder_)
         outOfOrder_ = false;
     else
         outOfOrder_ = true;
+
+    resetActualCallMatchingState();
 }
 
 void MockCheckedExpectedCall::finalizeActualCallMatch()
@@ -262,7 +277,6 @@ void MockCheckedExpectedCall::wasPassedToObject()
 
 void MockCheckedExpectedCall::resetActualCallMatchingState()
 {
-    actualCallOrder_ = NOT_CALLED_YET;
     wasPassedToObject_ = (objectPtr_ == NULL);
     isActualCallMatchFinalized_ = false;
 
@@ -321,23 +335,43 @@ SimpleString MockCheckedExpectedCall::callToString()
 
     if (inputParameters_->begin() == NULL && outputParameters_->begin() == NULL) {
         str += (ignoreOtherParameters_) ? "all parameters ignored" : "no parameters";
-        return str;
+    }
+    else
+    {
+        MockNamedValueListNode* p;
+
+        for (p = inputParameters_->begin(); p; p = p->next()) {
+            str += StringFromFormat("%s %s: <%s>", p->getType().asCharString(), p->getName().asCharString(), getInputParameterValueString(p->getName()).asCharString());
+            if (p->next()) str += ", ";
+        }
+
+        for (p = outputParameters_->begin(); p; p = p->next()) {
+            str += StringFromFormat("%s %s: <output>", p->getType().asCharString(), p->getName().asCharString());
+            if (p->next()) str += ", ";
+        }
+
+        if (ignoreOtherParameters_)
+            str += ", other parameters are ignored";
     }
 
-	MockNamedValueListNode* p;
-
-    for (p = inputParameters_->begin(); p; p = p->next()) {
-        str += StringFromFormat("%s %s: <%s>", p->getType().asCharString(), p->getName().asCharString(), getInputParameterValueString(p->getName()).asCharString());
-        if (p->next()) str += ", ";
+    if (actualCalls_ < minCalls_)
+    {
+        if (minCalls_ == maxCalls_)
+        {
+            str += StringFromFormat(" (expected %d call%s, but was called %d time%s)",
+                                    minCalls_, (minCalls_ == 1) ? "" : "s", actualCalls_, (actualCalls_ == 1) ? "" : "s" );
+        }
+        else
+        {
+            str += StringFromFormat(" (expected at least %d call%s, but was called %d time%s)",
+                                    minCalls_, (minCalls_ == 1) ? "" : "s", actualCalls_, (actualCalls_ == 1) ? "" : "s" );
+        }
+    }
+    else
+    {
+        str += StringFromFormat(" (called %d time%s)", actualCalls_, (actualCalls_ == 1) ? "" : "s");
     }
 
-    for (p = outputParameters_->begin(); p; p = p->next()) {
-        str += StringFromFormat("%s %s: <output>", p->getType().asCharString(), p->getName().asCharString());
-        if (p->next()) str += ", ";
-    }
-
-    if (ignoreOtherParameters_)
-        str += ", other parameters are ignored";
     return str;
 }
 
@@ -475,6 +509,12 @@ bool MockCheckedExpectedCall::isOutOfOrder() const
     return outOfOrder_;
 }
 
+unsigned int MockCheckedExpectedCall::getMaxCalls() const
+{
+    return maxCalls_;
+}
+
+#if 0
 struct MockExpectedCallCompositeNode
 {
     MockExpectedCallCompositeNode(MockExpectedCall& functionCall, MockExpectedCallCompositeNode* next) : next_(next), call_(functionCall){}
@@ -673,6 +713,7 @@ MockExpectedCall& MockExpectedCallComposite::onObject(void* object)
         node->call_.onObject(object);
     return *this;
 }
+#endif
 
 MockExpectedCall& MockIgnoredExpectedCall::instance()
 {
