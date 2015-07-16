@@ -348,7 +348,7 @@ SimpleString MockExpectedCallsList::fulfilledCallsToString(const SimpleString& l
         if (p->expectedCall_->isFulfilled())
             str = appendStringOnANewLine(str, linePrefix, p->expectedCall_->callToString());
 
-#if REENABLE_WHEN_ACTUAL_CALL_ORDER_IS_HANDLED_AGAIN
+#if 0 // Reenable when actual call order is handler again
     MockExpectedCallsListNode* nextNodeInOrder;
     for (int callOrder = 1; (nextNodeInOrder = findNodeWithCallOrderOf(callOrder)); callOrder++)
         if (nextNodeInOrder)

@@ -119,9 +119,6 @@ void MockSupport::clear()
     MockActualCallTrace::instance().clear();
 
     expectations_.deleteAllExpectationsAndClearList();
-#if 0
-    compositeCalls_.clear();
-#endif
     ignoreOtherCalls_ = false;
     enabled_ = true;
     actualCallOrder_ = 0;
