@@ -7,13 +7,16 @@ environment:
   matrix:
   - PlatformToolset: MinGW
     Platform: Win32
+    ToolsetVersion: 4.8.5-rev0
   - PlatformToolset: MinGW
     Platform: x64
+    ToolsetVersion: 4.8.5-rev0
   - PlatformToolset: v90
   - PlatformToolset: v100
 
 install:
-- ps: if ($env:PlatformToolset -eq 'MinGW') { choco install scripts\chocolatey\mingw-w64\mingw-w64.nuspec $( if ($env:Platform -eq 'Win32') { Write-Output -forcex86 } ) }
+- ps: if ($env:PlatformToolset -eq 'MinGW') { choco pack scripts\chocolatey\mingw-w64.$env:ToolsetVersion\mingw-w64.nuspec }
+- ps: if ($env:PlatformToolset -eq 'MinGW') { choco install scripts\chocolatey\mingw-w64.$env:ToolsetVersion.nupkg -version $env:ToolsetVersion $( if ($env:Platform -eq 'Win32') { Write-Output -forcex86 } ) }
 
 build_script:
 - ps: scripts\appveyor_ci_build.ps1
