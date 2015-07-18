@@ -13,7 +13,7 @@ environment:
   - PlatformToolset: v100
 
 install:
-- ps: if ($env:PlatformToolset -eq 'MinGW') { choco install mingw $( if ($env:Platform -eq 'Win32') { Write-Output -forcex86 } ) }
+- ps: if ($env:PlatformToolset -eq 'MinGW') { choco install scripts\chocolatey\mingw-w64\mingw-w64.nuspec $( if ($env:Platform -eq 'Win32') { Write-Output -forcex86 } ) }
 
 build_script:
 - ps: scripts\appveyor_ci_build.ps1
