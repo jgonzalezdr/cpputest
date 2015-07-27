@@ -85,7 +85,7 @@ TEST(UtestShell, PassedCheckEqualWillIncreaseTheAmountOfChecks)
 
 IGNORE_TEST(UtestShell, IgnoreTestAccessingFixture)
 {
-    CHECK(&fixture != 0);
+    CHECK(&fixture != NULL);
 }
 
 TEST(UtestShell, MacrosUsedInSetup)
@@ -178,7 +178,11 @@ TEST(UtestShell, RunInSeparateProcessTest)
     fixture.assertPrintContains("Failed in separate process");
 }
 
-#if !defined(__MINGW32__) && !defined(_MSC_VER)
+#if defined(__MINGW32__) || defined(_MSC_VER) || defined(__IAR_SYSTEMS_ICC__) || defined(__ARMCC_VERSION) || defined(__TMS320C2000__)
+
+IGNORE_TEST(UtestShell, TestDefaultCrashMethodInSeparateProcessTest) {}
+
+#else
 
 TEST(UtestShell, TestDefaultCrashMethodInSeparateProcessTest)
 {
@@ -187,10 +191,6 @@ TEST(UtestShell, TestDefaultCrashMethodInSeparateProcessTest)
     fixture.runAllTests();
     fixture.assertPrintContains("Failed in separate process - killed by signal 11");
 }
-
-#else
-
-IGNORE_TEST(UtestShell, TestDefaultCrashMethodInSeparateProcessTest) {}
 
 #endif
 
