@@ -42,6 +42,8 @@ if (COVERAGE AND NOT MSVC)
     set(CPPUTEST_C_FLAGS "${CPPUTEST_C_FLAGS} --coverage")
     set(CPPUTEST_CXX_FLAGS "${CPPUTEST_CXX_FLAGS} --coverage")
     set(CMAKE_BUILD_TYPE "Debug")
+
+    add_custom_target( coverage_html_report COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_SOURCE_DIR}/src -DBINARY_DIR=${CMAKE_BINARY_DIR}/src -DOUTPUT_DIR=${CMAKE_SOURCE_DIR}/coverage -DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -P ${PROJECT_SOURCE_DIR}/cmake/Scripts/CoverageHtmlReport.cmake )
 endif (COVERAGE AND NOT MSVC)
 
 if (C++11)
