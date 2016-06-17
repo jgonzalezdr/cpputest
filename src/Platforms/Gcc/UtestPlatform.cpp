@@ -40,9 +40,9 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
-#include <unistd.h>
 #include <signal.h>
 #ifndef __MINGW32__
+#include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
 #endif

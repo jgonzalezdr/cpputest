@@ -130,4 +130,11 @@ public:
     virtual ~MockExpectedObjectDidntHappenFailure(){}
 };
 
+class MockStrictOrderingIncompatibleWithOptionalCallsFailure : public MockFailure
+{
+public:
+    MockStrictOrderingIncompatibleWithOptionalCallsFailure(UtestShell* test, const SimpleString& functionName, unsigned int minCalls, unsigned int maxCalls);
+    virtual ~MockStrictOrderingIncompatibleWithOptionalCallsFailure(){}
+};
+
 #endif

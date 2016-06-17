@@ -140,6 +140,7 @@ private:
     bool wasLastActualCallFulfilled();
     void failTestWithExpectedCallsNotFulfilled();
     void failTestWithOutOfOrderCalls();
+    void failTestWithStrictOrderingIncompatibleWithOptionalCalls();
 
     MockNamedValue* retrieveDataFromStore(const SimpleString& name);
 

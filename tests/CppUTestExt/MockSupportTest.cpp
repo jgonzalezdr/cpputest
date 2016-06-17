@@ -204,17 +204,18 @@ TEST(MockSupportTest, strictOrderViolated)
     CHECK_EXPECTED_MOCK_FAILURE(expectedFailure);
 }
 
-IGNORE_TEST(MockSupportTest, strictOrderViolatedWorksHierarchically)
+TEST(MockSupportTest, strictOrderViolatedWorksHierarchically)
 {
     mock().strictOrder();
     mock("bla").strictOrder();
     addFunctionToExpectationsList("foo1", 1)->callWasMade(2);
     addFunctionToExpectationsList("foo2", 2)->callWasMade(1);
+    addFunctionToExpectationsList("foo3", 1)->callWasMade(1);
     MockCallOrderFailure expectedFailure(mockFailureTest(), *expectationsList);
-    mock("bla").expectOneCall("foo1");
+    mock("bla").expectOneCall("foo3");
     mock().expectOneCall("foo1");
     mock().expectOneCall("foo2");
-    mock("bla").actualCall("foo1");
+    mock("bla").actualCall("foo3");
     mock().actualCall("foo2");
     mock().actualCall("foo1");
     mock().checkExpectations();
@@ -265,20 +266,33 @@ TEST(MockSupportTest, strictOrderViolatedAcrossScopes)
     CHECK_NO_MOCK_FAILURE();
 }
 
-IGNORE_TEST(MockSupportTest, usingNCalls)
+TEST(MockSupportTest, strictOrderUsingNCalls)
 {
     mock().strictOrder();
     mock().expectOneCall("foo1");
     mock().expectNCalls(2, "foo2");
     mock().expectOneCall("foo1");
+    mock().expectNCalls(3, "foo2");
 
     mock().actualCall("foo1");
     mock().actualCall("foo2");
     mock().actualCall("foo2");
     mock().actualCall("foo1");
+    mock().actualCall("foo2");
+    mock().actualCall("foo2");
+    mock().actualCall("foo2");
 
     mock().checkExpectations();
     CHECK_NO_MOCK_FAILURE();
+}
+
+TEST(MockSupportTest, strictOrderUsingOptionalCalls)
+{
+    mock().strictOrder();
+    mock().expectRangeOfCalls(0, 1, "foo");
+
+    MockStrictOrderingIncompatibleWithOptionalCallsFailure expectedFailure(mockFailureTest(), "foo", 0, 1);
+    CHECK_EXPECTED_MOCK_FAILURE(expectedFailure);
 }
 
 TEST(MockSupportTest, expectOneCallHoweverMultipleHappened)
