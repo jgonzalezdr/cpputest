@@ -61,7 +61,7 @@ TEST(MockPlugin, checkExpectationsAndClearAtEnd)
 
     MockExpectedCallsListForTest expectations;
     expectations.addFunction("foobar");
-    MockExpectedCallsDidntHappenFailure expectedFailure(test, expectations);
+    MockExpectedCallsNotFulfilledFailure expectedFailure(test, expectations);
 
     mock().expectOneCall("foobar");
 
