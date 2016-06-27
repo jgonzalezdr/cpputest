@@ -88,7 +88,7 @@ TEST(MockCallTest, checkExpectationsClearsTheExpectations)
 
     MockExpectedCallsListForTest expectations;
     expectations.addFunction("foobar");
-    MockExpectedCallsDidntHappenFailure expectedFailure(mockFailureTest(), expectations);
+    MockExpectedCallsNotFulfilledFailure expectedFailure(mockFailureTest(), expectations);
 
     mock().expectOneCall("foobar");
     mock().checkExpectations();
@@ -104,7 +104,7 @@ TEST(MockCallTest, expectOneCallInScopeButNotHappen)
 
     MockExpectedCallsListForTest expectations;
     expectations.addFunction("scope::foobar");
-    MockExpectedCallsDidntHappenFailure expectedFailure(mockFailureTest(), expectations);
+    MockExpectedCallsNotFulfilledFailure expectedFailure(mockFailureTest(), expectations);
 
     mock("scope").expectOneCall("foobar");
     mock().checkExpectations();
@@ -329,7 +329,7 @@ TEST(MockCallTest, ignoreOtherStillFailsIfExpectedOneDidntHappen)
 
     MockExpectedCallsListForTest expectations;
     expectations.addFunction("foo");
-    MockExpectedCallsDidntHappenFailure expectedFailure(mockFailureTest(), expectations);
+    MockExpectedCallsNotFulfilledFailure expectedFailure(mockFailureTest(), expectations);
 
     mock().expectOneCall("foo");
     mock().ignoreOtherCalls();
@@ -421,7 +421,7 @@ TEST(MockCallTest, expectNCalls_NotFulfilled)
 
     MockExpectedCallsListForTest expectations;
     expectations.addFunction(2, "boo")->callWasMade(1);
-    MockExpectedCallsDidntHappenFailure expectedFailure(mockFailureTest(), expectations);
+    MockExpectedCallsNotFulfilledFailure expectedFailure(mockFailureTest(), expectations);
 
     mock().expectNCalls(2, "boo");
     mock().actualCall("boo");
