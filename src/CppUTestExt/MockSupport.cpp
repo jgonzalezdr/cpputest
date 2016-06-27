@@ -274,7 +274,7 @@ void MockSupport::failTestWithExpectedCallsNotFulfilled()
         if(getMockSupport(p))
             expectationsList.addExpectations(getMockSupport(p)->expectations_);
 
-    MockExpectedCallsDidntHappenFailure failure(activeReporter_->getTestToFail(), expectationsList);
+    MockExpectedCallsNotFulfilledFailure failure(activeReporter_->getTestToFail(), expectationsList);
     failTest(failure);
 }
 
