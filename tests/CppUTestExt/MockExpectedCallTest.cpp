@@ -586,7 +586,7 @@ TEST(MockExpectedCall, toStringForCallOrderSingle)
 {
     MockCheckedExpectedCall expectedCall(1);
     expectedCall.withName("name");
-    expectedCall.withCallOrder(2);
+    expectedCall.withCallOrder(2, 2);
     expectedCall.callWasMade(1);
     STRCMP_EQUAL("name -> expected call order: <2> -> no parameters (expected 1 call, called 1 time)", expectedCall.callToString().asCharString());
 }
@@ -607,7 +607,7 @@ TEST(MockExpectedCall, toStringForCallOrderMultiple)
 TEST(MockExpectedCall, callOrderIsFulfilledButWithWrongOrderSingle)
 {
     call->withName("name");
-    call->withCallOrder(2);
+    call->withCallOrder(2, 2);
     call->callWasMade(1);
     CHECK(call->isFulfilled());
     CHECK(call->isOutOfOrder());
@@ -640,7 +640,7 @@ TEST(MockExpectedCall, callOrderIsFulfilledButWithWrongOrderMultipleTooLate)
 TEST(MockExpectedCall, callOrderIsFulfilledSingle)
 {
     call->withName("name");
-    call->withCallOrder(1);
+    call->withCallOrder(1, 1);
     call->callWasMade(1);
     CHECK(call->isFulfilled());
     CHECK_FALSE(call->isOutOfOrder());
@@ -711,7 +711,6 @@ TEST_GROUP(MockIgnoredExpectedCall)
 TEST(MockIgnoredExpectedCall, worksAsItShould)
 {
     ignored.withName("func");
-    ignored.withCallOrder(1);
     ignored.withCallOrder(1, 1);
     ignored.onObject(NULLPTR);
     ignored.withBoolParameter("umm", true);
