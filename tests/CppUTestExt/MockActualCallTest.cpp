@@ -107,7 +107,7 @@ TEST(MockCheckedActualCall, actualCallWithNoReturnValueAndMeaninglessCallOrderFo
 
 TEST(MockCheckedActualCall, unExpectedParameterName)
 {
-    MockCheckedExpectedCall call1;
+    MockCheckedExpectedCall call1(1);
     call1.withName("func");
     list->addExpectedCall(&call1);
 
@@ -123,8 +123,8 @@ TEST(MockCheckedActualCall, unExpectedParameterName)
 
 TEST(MockCheckedActualCall, multipleSameFunctionsExpectingAndHappenGradually)
 {
-    MockCheckedExpectedCall* call1 = new MockCheckedExpectedCall();
-    MockCheckedExpectedCall* call2 = new MockCheckedExpectedCall();
+    MockCheckedExpectedCall* call1 = new MockCheckedExpectedCall(1);
+    MockCheckedExpectedCall* call2 = new MockCheckedExpectedCall(1);
     call1->withName("func");
     call2->withName("func");
     list->addExpectedCall(call1);
