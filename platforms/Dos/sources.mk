@@ -34,6 +34,7 @@ CPPUX_OBJECTS := \
   $(CPPUTEST_HOME)/src/CppUTestExt/OrderedTest.o \
   $(CPPUTEST_HOME)/src/CppUTestExt/MemoryReportFormatter.o \
   $(CPPUTEST_HOME)/src/CppUTestExt/MockExpectedCallsList.o \
+  $(CPPUTEST_HOME)/src/CppUTestExt/MockActualCallsQueue.o \
   $(CPPUTEST_HOME)/src/CppUTestExt/MockSupport.o \
 
 CPPU1_OBJECTS := \
@@ -108,6 +109,7 @@ CPPUX3_OBJECTS := \
   $(CPPUTEST_HOME)/tests/CppUTestExt/AllTests.o \
   $(CPPUTEST_HOME)/tests/CppUTestExt/MockFailureReporterForTest.o \
   $(CPPUTEST_HOME)/tests/CppUTestExt/ExpectedFunctionsListTest.o \
+  $(CPPUTEST_HOME)/tests/CppUTestExt/ActualCallsQueueTest.o \
   $(CPPUTEST_HOME)/tests/CppUTestExt/MockCallTest.o \
   $(CPPUTEST_HOME)/tests/CppUTestExt/MockComparatorCopierTest.o \
   $(CPPUTEST_HOME)/tests/CppUTestExt/MockHierarchyTest.o \
