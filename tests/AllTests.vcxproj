@@ -250,6 +250,7 @@
     <ClCompile Include="CppUTest\CompatabilityTests.cpp" />
     <ClCompile Include="CppUTest\CommandLineArgumentsTest.cpp" />
     <ClCompile Include="CppUTest\CommandLineTestRunnerTest.cpp" />
+    <ClCompile Include="CppUTestExt\ActualCallsQueueTest.cpp" />
     <ClCompile Include="CppUTestExt\AllTests.cpp" />
     <ClCompile Include="CppUTestExt\CodeMemoryReporterTest.cpp" />
     <ClCompile Include="CppUTestExt\GMockTest.cpp" />
