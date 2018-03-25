@@ -34,8 +34,11 @@
 
 #include <execinfo.h>
 #include <cxxabi.h>
+#include <dlfcn.h>
+#include <stdio.h>
+#include <unistd.h>
 
-SimpleString demangle(const char* line);
+SimpleString getAddressInfo(const char* file, int line, void *caller_addr);
 
 #endif
 
@@ -170,37 +173,98 @@ void MemoryLeakOutputStringBuffer::startMemoryLeakReporting()
 }
 
 #if CPPUTEST_GNU_CALLSTACK_SUPPORTED
-SimpleString demangle(const char* line)
+
+// TODO: Move this function to a new source file
+static SimpleString demangle(const char* mangled_symbol)
 {
-    SimpleString buffer(line);
-
-    size_t fPos = buffer.rfind('(');
-    size_t e2Pos = buffer.findFrom(fPos+1, ')');
-    if( (fPos == SimpleString::npos) || (e2Pos == SimpleString::npos) )
-    {
-        return line;
-    }
-
-    size_t ePos = buffer.rfindFrom(e2Pos-1, '+');
-    if( (ePos == SimpleString::npos) || (fPos >= ePos) )
-    {
-        return line;
-    }
-
-    size_t len = ePos-fPos-1;
-    SimpleString symbol = buffer.subString(fPos+1, len);
-
     int status;
-    char* demangled = abi::__cxa_demangle( symbol.asCharString(), NULLPTR, NULLPTR, &status );
-    if( demangled != NULLPTR && status == 0 )
+    const char* demangled_symbol = abi::__cxa_demangle( mangled_symbol, NULLPTR, NULLPTR, &status );
+    if( demangled_symbol != NULLPTR && status == 0 )
     {
-        return buffer.subString(0, fPos+1) + demangled + buffer.subString(ePos);
+        return demangled_symbol;
     }
     else
     {
-        return line;
+        return mangled_symbol;
     }
 }
+
+// TODO: Move this function to a new source file
+static SimpleString getAddressLine(const char *filename, void *address)
+{
+    SimpleString cmd_result;
+
+    SimpleString cmd_line = StringFromFormat("addr2line -e %s %p", filename, address);
+
+    FILE* cmd_pipe = popen(cmd_line.asCharString(), "r");
+    if (cmd_pipe) {
+        char buffer[256];
+
+        while (!feof(cmd_pipe)) {
+            if (fgets(buffer, sizeof(buffer), cmd_pipe) != NULLPTR) {
+                cmd_result += buffer;
+            }
+        }
+
+        pclose(cmd_pipe);
+    }
+
+    return cmd_result;
+}
+
+// TODO: Move this function to a new source file
+static SimpleString getAddressInfo(const char *filename, void *address)
+{
+    SimpleString result;
+
+    SimpleString address_line = getAddressLine(filename, address);
+
+    size_t sep_pos = address_line.find(':');
+    if (sep_pos != SimpleString::npos) {
+        SimpleString source_file = address_line.subString(0, sep_pos-1);
+        SimpleString line_num_str = address_line.subString(sep_pos+1);
+        int line_num = SimpleString::AtoI(line_num_str.asCharString());
+
+        static const SimpleString UNKNOWN_SOURCE_FILE = "??";
+        if (source_file != UNKNOWN_SOURCE_FILE) {
+            result = StringFromFormat("Source '%s'<Line:%d>, ", source_file.asCharString(), line_num);
+        }
+    }
+
+    return result;
+}
+
+// TODO: Move this function to a new source file
+SimpleString getAddressInfo(const char* file, int line, void *caller_addr)
+{
+    SimpleString result;
+
+    if (caller_addr != NULLPTR) {
+        Dl_info dlinfo;
+        if (dladdr(caller_addr, &dlinfo)) {
+            if (dlinfo.dli_sname != NULLPTR) {
+                int caller_offset = (int)((intptr_t)caller_addr - (intptr_t)dlinfo.dli_saddr);
+                result = StringFromFormat("Function %s<+0x%X>, ", demangle(dlinfo.dli_sname).asCharString(), caller_offset);
+                result += getAddressInfo(dlinfo.dli_fname, caller_addr);
+            } else {
+                result = StringFromFormat("Unknown function (Address:%p), ", caller_addr);
+            }
+            result += StringFromFormat("Binary '%s'", dlinfo.dli_fname);
+        } else {
+            result = StringFromFormat("Unknown function (Address:%p), ", caller_addr);
+        }
+    } else {
+        result = StringFromFormat("Source '%s'<Line:%d>", file, line);
+    }
+
+    return result;
+}
+
+static SimpleString getAddressInfo(MemoryLeakDetectorNode *leak)
+{
+    return getAddressInfo(leak->file_, leak->line_, leak->addr_);
+}
+
 #endif
 
 void MemoryLeakOutputStringBuffer::reportMemoryLeak(MemoryLeakDetectorNode* leak)
@@ -211,31 +275,11 @@ void MemoryLeakOutputStringBuffer::reportMemoryLeak(MemoryLeakDetectorNode* leak
 
     total_leaks_++;
 #if CPPUTEST_GNU_CALLSTACK_SUPPORTED
-    if( leak->addr_ != NULLPTR )
-    {
-        void* fnAddr = leak->addr_;
-        char** fnSyms = backtrace_symbols(&fnAddr, 1);
-
-        if( fnSyms != NULLPTR )
-        {
-            outputBuffer_.add("Alloc num (%u) Leak size: %lu Allocated at: %s. Type: \"%s\"\n\tMemory: <%p> Content:\n",
-                    leak->number_, (unsigned long) leak->size_, demangle(fnSyms[0]).asCharString(), leak->allocator_->alloc_name(), (void*) leak->memory_);
-
-            PlatformSpecificFree(fnSyms);
-        }
-        else
-        {
-            outputBuffer_.add("Alloc num (%u) Leak size: %lu Allocated at: %p. Type: \"%s\"\n\tMemory: <%p> Content:\n",
-                    leak->number_, (unsigned long) leak->size_, fnAddr, leak->allocator_->alloc_name(), (void*) leak->memory_);
-        }
-    }
-    else
-    {
-#endif
-        outputBuffer_.add("Alloc num (%u) Leak size: %lu Allocated at: %s and line: %d. Type: \"%s\"\n\tMemory: <%p> Content:\n",
-                leak->number_, (unsigned long) leak->size_, leak->file_, leak->line_, leak->allocator_->alloc_name(), (void*) leak->memory_);
-#if CPPUTEST_GNU_CALLSTACK_SUPPORTED
-    }
+    outputBuffer_.add("Alloc num (%u) Leak size: %lu Allocated from: %s. Type: \"%s\"\n\tMemory: <%p> Content:\n",
+            leak->number_, (unsigned long) leak->size_, getAddressInfo(leak).asCharString(), leak->allocator_->alloc_name(), (void*) leak->memory_);
+#else
+    outputBuffer_.add("Alloc num (%u) Leak size: %lu Allocated from: Source '%s'<Line:%d>. Type: \"%s\"\n\tMemory: <%p> Content:\n",
+            leak->number_, (unsigned long) leak->size_, leak->file_, leak->line_, leak->allocator_->alloc_name(), (void*) leak->memory_);
 #endif
     outputBuffer_.addMemoryDump(leak->memory_, leak->size_);
 
