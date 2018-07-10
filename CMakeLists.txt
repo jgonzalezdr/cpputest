@@ -48,6 +48,7 @@ option(MAP_FILE "Enable the creation of a map file" OFF)
 option(COVERAGE "Enable running with coverage" OFF)
 option(C++11 "Compile with C++11 support" OFF)
 option(WERROR "Compile with warnings as errors" OFF)
+option(DECORATE_OUTPUT "Appends the architecture bitsize and config type to generated output libraries" OFF)
 
 option(TESTS "Compile and make tests for the code?" ON)
 option(TESTS_DETAILED "Run each test separately instead of grouped?" OFF)
@@ -57,6 +58,40 @@ option(VERBOSE_CONFIG "Print configuration to stdout during generation" ON)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "What kind of build this is" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
+
+# Determine toolchain
+
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+    set(ARCH_BITSIZE 64)
+elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    set(ARCH_BITSIZE 32)
+elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "2")
+    set(ARCH_BITSIZE 16)
+else()
+    message(FATAL_ERROR "Could not determine target architecture bit size")
+endif()
+
+if(NOT DEFINED TOOLCHAIN_SUFFIX)
+    if(MINGW)
+        set(TOOLCHAIN_SUFFIX "MinGW")
+    else()
+        set(TOOLCHAIN_SUFFIX "${CMAKE_CXX_COMPILER_ID}")
+    endif()
+    
+    if(TOOLCHAIN_SUFFIX)
+        set(TOOLCHAIN_SUFFIX "${TOOLCHAIN_SUFFIX}${ARCH_BITSIZE}")
+        if(CMAKE_CXX_COMPILER_VERSION)
+            set(TOOLCHAIN_SUFFIX "${TOOLCHAIN_SUFFIX}-${CMAKE_CXX_COMPILER_VERSION}")
+        endif()
+    endif()
+endif()
+
+if(DECORATE_OUTPUT)
+    set(CMAKE_RELEASE_POSTFIX "${ARCH_BITSIZE}")
+    set(CMAKE_DEBUG_POSTFIX "${ARCH_BITSIZE}d")
+    set(CMAKE_RELWITHDEBINFO_POSTFIX "${ARCH_BITSIZE}rd")
+    set(CMAKE_MINSIZEREL_POSTFIX "${ARCH_BITSIZE}s")
+endif()
 
 # Pkg-config file
 include(FindPkgConfig)
@@ -156,12 +191,29 @@ else()
     " or write generators for CppUTestConfig.cmake by yourself.")
 endif()
 
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+    set(CPACK_PACKAGE_VERSION_MAJOR ${CppUTest_version_major})
+    set(CPACK_PACKAGE_VERSION_MINOR ${CppUTest_version_minor})
+    set(CPACK_PACKAGE_FILE_NAME "CppUTest-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
+    if(TOOLCHAIN_SUFFIX)
+        set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-${TOOLCHAIN_SUFFIX}")
+    endif()
+    if(CMAKE_BUILD_TYPE)
+        set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-${CMAKE_BUILD_TYPE}")
+    endif()
+
+    
+    include(CPack)
+endif()
+
 if(VERBOSE_CONFIG)
   message("
 -------------------------------------------------------
 CppUTest Version ${CppUTest_version_major}.${CppUTest_version_minor}
 
 Current compiler options:
+    Toolchain                           ${TOOLCHAIN_SUFFIX}
     CC:                                 ${CMAKE_C_COMPILER}
     CXX:                                ${CMAKE_CXX_COMPILER}
     CppUTest CFLAGS:                    ${CPPUTEST_C_FLAGS}
