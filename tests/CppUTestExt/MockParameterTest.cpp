@@ -669,7 +669,7 @@ TEST(MockParameterTest, noActualCallForUnmodifiedOutputParameter)
     mock().expectOneCall("foo").withUnmodifiedOutputParameter("output");
 
     expectations.addFunction("foo")->withUnmodifiedOutputParameter("output");
-    MockExpectedCallsDidntHappenFailure expectedFailure(mockFailureTest(), expectations);
+    MockExpectedCallsNotFulfilledFailure expectedFailure(mockFailureTest(), expectations);
 
     mock().checkExpectations();
     CHECK_EXPECTED_MOCK_FAILURE(expectedFailure);
