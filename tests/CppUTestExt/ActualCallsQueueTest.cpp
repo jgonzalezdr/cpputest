@@ -38,6 +38,7 @@ TEST_GROUP(MockActualCallsQueue)
     void teardown()
     {
         CHECK_NO_MOCK_FAILURE();
+        MockFailureReporterForTest::clearReporter();
     }
 };
 
