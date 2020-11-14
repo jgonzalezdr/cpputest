@@ -42,6 +42,11 @@ set(CppUTestExt_headers
         ${CppUTestRootDirectory}/include/CppUTestExt/MockSupport.h
 )
 
+if( MSVC )
+    set( CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Z7" )
+    set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7" )
+endif()
+
 add_library(${CppUTestExtLibName} STATIC ${CppUTestExt_src} ${CppUTestExt_headers})
 target_link_libraries(${CppUTestExtLibName} ${CPPUNIT_EXTERNAL_LIBRARIES})
 
@@ -58,6 +63,7 @@ target_include_directories(${CppUTestExtLibName}
 
 set_target_properties(${CppUTestExtLibName} PROPERTIES
     PUBLIC_HEADER "${CppUTestExt_headers}")
+
 install(TARGETS ${CppUTestExtLibName}
     EXPORT CppUTestTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

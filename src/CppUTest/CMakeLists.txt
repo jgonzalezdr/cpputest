@@ -1,3 +1,8 @@
+if( MSVC )
+    set( CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Z7" )
+    set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7" )
+endif()
+
 add_library(${CppUTestLibName}
         CommandLineArguments.cpp
         MemoryLeakWarningPlugin.cpp
@@ -75,6 +80,7 @@ set_target_properties(${CppUTestLibName} PROPERTIES
 if (WIN32)
     target_link_libraries(${CppUTestLibName} winmm.lib)
 endif (WIN32)
+
 install(TARGETS ${CppUTestLibName}
     EXPORT CppUTestTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
